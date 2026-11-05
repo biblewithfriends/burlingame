@@ -31,20 +31,25 @@
 
 <section class="block" style="padding-top:0"><div class="wrap split">
   <div id="prayer-public">
-    <h2>Current burdens</h2>
+    <h2>This week <span class="muted week-of" id="week-of"></span></h2>
     <p class="status" id="prayer-status" role="status">Loading…</p>
-    <p id="prayer-empty" hidden>No prayer burdens are posted right now.</p>
-    <ol class="feed" id="prayer-current"></ol>
+    <p class="undo-bar no-print" id="undo-bar" role="status" hidden></p>
+    <p id="prayer-empty" hidden>No prayer burdens yet this week.</p>
+    <ol class="feed numbered" id="prayer-this"></ol>
+    <div id="prayer-last-wrap" hidden>
+      <h2 style="margin-top:2.25rem">Last week <span class="muted week-of" id="last-week-of"></span></h2>
+      <ol class="feed numbered" id="prayer-last"></ol>
+    </div>
     <div id="prayer-answered-wrap" hidden>
       <h2 style="margin-top:2.25rem">Answered</h2>
-      <ol class="feed" id="prayer-answered"></ol>
+      <ol class="feed numbered" id="prayer-answered"></ol>
     </div>
   </div>
 
   <aside class="card no-print" aria-labelledby="h-share">
     <h2 id="h-share" style="font-size:1.4rem">Share a burden</h2>
     <form id="share-form" novalidate>
-      <p class="note">Please leave out names, health details, and personal circumstances unless the person has said yes. It will appear here once it’s added to the list.</p>
+      <p class="note">Please leave out names, health details, and personal circumstances unless the person has said yes. It will appear on this page right away.</p>
       <div class="field">
         <label for="s-body">Prayer burden</label>
         <textarea id="s-body" name="body" aria-describedby="s-count s-err"></textarea>
@@ -59,7 +64,7 @@
       <div class="hp" aria-hidden="true"><label for="s-web">Leave empty</label><input id="s-web" name="website" tabindex="-1" autocomplete="off"></div>
       <input type="hidden" name="started">
       <button class="btn btn-primary" type="submit">Send</button>
-      <p class="done" id="s-done" role="status" tabindex="-1" hidden>Thank you. Your burden was sent.</p>
+      <p class="done" id="s-done" role="status" tabindex="-1" hidden>Thank you. Your burden was added to this week’s list.</p>
     </form>
   </aside>
 </div></section>

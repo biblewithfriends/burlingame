@@ -19,26 +19,89 @@
     return fetch(URL_ + "?action=" + action + "&t=" + Date.now()).then(function (r) { return r.json(); });
   }
 
-  /* ── Prayer list ── */
+  /* ── Prayer list: this week, last week, answered ── */
+  var loadPrayer = function () {};
   if ($("prayer-public")) {
     var st = $("prayer-status");
-    if (!URL_) st.textContent = "The prayer list isn’t connected yet.";
-    else load("prayer").then(function (d) {
-      if (!d.ok) throw 0;
-      st.hidden = true;
-      if (d.lastUpdated) { $("prayer-updated").textContent = "Last updated " + niceDate(d.lastUpdated); $("prayer-updated").hidden = false; }
-      function fill(list, rows, answered) {
-        rows.forEach(function (p) {
-          var li = el("li");
-          p.text.split(/\n+/).forEach(function (t) { li.appendChild(el("p", null, t)); });
-          li.appendChild(el("p", "date", "Added " + niceDate(p.dateAdded) + (answered && p.dateAnswered ? " · Answered " + niceDate(p.dateAnswered) : "")));
-          list.appendChild(li);
-        });
-      }
-      fill($("prayer-current"), d.current, false);
-      $("prayer-empty").hidden = d.current.length > 0;
-      if (d.answered.length) { fill($("prayer-answered"), d.answered, true); $("prayer-answered-wrap").hidden = false; }
-    }).catch(function () { st.textContent = "The prayer list couldn’t be loaded. Please try again later."; });
+    var shortDate = function (s) { var d = new Date(s + "T12:00:00"); return isNaN(d) ? s : d.toLocaleDateString("en-US", { month: "long", day: "numeric" }); };
+    var addDays = function (s, n) { var d = new Date(s + "T12:00:00"); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+
+    var fill = function (list, rows, answered) {
+      list.textContent = "";
+      rows.forEach(function (p) {
+        var li = el("li");
+        p.text.split(/\n+/).forEach(function (t) { li.appendChild(el("p", null, t)); });
+        li.appendChild(el("p", "date", "Added " + niceDate(p.dateAdded) + (answered && p.dateAnswered ? " · Answered " + niceDate(p.dateAnswered) : "")));
+        var actions = el("div", "item-actions no-print");
+        var del = el("button", "btn btn-small btn-del", "Delete");
+        del.type = "button";
+        del.setAttribute("aria-label", "Delete this prayer burden");
+        del.addEventListener("click", function () { askDelete(actions, p.id, del); });
+        actions.appendChild(del);
+        li.appendChild(actions);
+        list.appendChild(li);
+      });
+    };
+
+    /* Two-step delete: "Delete" → "Yes, delete it" / "Cancel" */
+    var askDelete = function (box, id, delBtn) {
+      delBtn.hidden = true;
+      var q = el("span", "confirm-q", "Delete this prayer burden?");
+      var yes = el("button", "btn btn-small btn-del-yes", "Yes, delete it"); yes.type = "button";
+      var no = el("button", "btn btn-small btn-ghost", "Cancel"); no.type = "button";
+      var reset = function () { [q, yes, no].forEach(function (n) { n.remove(); }); delBtn.hidden = false; delBtn.focus(); };
+      no.addEventListener("click", reset);
+      yes.addEventListener("click", function () {
+        yes.disabled = no.disabled = true; yes.textContent = "Deleting…";
+        fetch(URL_, { method: "POST", body: new URLSearchParams({ action: "prayer-delete", id: id }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.ok) loadPrayer().then(function () { showUndo(id); });
+            else { reset(); q.textContent = d.error || "It couldn’t be deleted."; box.appendChild(q); }
+          })
+          .catch(function () { reset(); q.textContent = "It couldn’t be deleted. Please check your connection."; box.appendChild(q); });
+      });
+      box.appendChild(q); box.appendChild(yes); box.appendChild(no);
+      yes.focus();
+    };
+
+    /* After a delete: "Deleted. Undo" — puts it back in the same place */
+    var showUndo = function (id) {
+      var bar = $("undo-bar"); bar.textContent = "";
+      bar.appendChild(el("span", null, "Prayer burden deleted. "));
+      var u = el("button", "btn btn-small btn-ghost", "Undo"); u.type = "button";
+      u.addEventListener("click", function () {
+        u.disabled = true; u.textContent = "Restoring…";
+        fetch(URL_, { method: "POST", body: new URLSearchParams({ action: "prayer-restore", id: id }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.ok) { bar.hidden = true; loadPrayer(); }
+            else { bar.textContent = d.error || "It couldn’t be restored."; }
+          })
+          .catch(function () { u.disabled = false; u.textContent = "Undo"; });
+      });
+      bar.appendChild(u);
+      bar.hidden = false;
+      u.focus();
+    };
+
+    loadPrayer = function (note) {
+      if (!URL_) { st.textContent = "The prayer list isn’t connected yet."; return; }
+      return load("prayer").then(function (d) {
+        if (!d.ok) throw 0;
+        st.hidden = !note; if (note) st.textContent = note;
+        if (d.lastUpdated) { $("prayer-updated").textContent = "Last updated " + niceDate(d.lastUpdated); $("prayer-updated").hidden = false; }
+        $("week-of").textContent = "· week of " + shortDate(d.weekOf);
+        $("last-week-of").textContent = "· week of " + shortDate(addDays(d.weekOf, -7));
+        fill($("prayer-this"), d.thisWeek, false);
+        $("prayer-empty").hidden = d.thisWeek.length > 0;
+        fill($("prayer-last"), d.lastWeek, false);
+        $("prayer-last-wrap").hidden = d.lastWeek.length === 0;
+        fill($("prayer-answered"), d.answered, true);
+        $("prayer-answered-wrap").hidden = d.answered.length === 0;
+      }).catch(function () { st.hidden = false; st.textContent = "The prayer list couldn’t be loaded. Please try again later."; });
+    };
+    loadPrayer();
   }
 
   /* ── Share a burden ── */
@@ -61,7 +124,7 @@
       var btn = form.querySelector("button"); btn.disabled = true; btn.textContent = "Sending…";
       var data = new URLSearchParams(new FormData(form)); data.append("action", "prayer-request");
       fetch(URL_, { method: "POST", body: data }).then(function (r) { return r.json(); }).then(function (d) {
-        if (d.ok) { form.reset(); count.textContent = "0 / 600"; form.querySelector("[name=started]").value = String(Date.now()); done.hidden = false; done.focus(); }
+        if (d.ok) { form.reset(); count.textContent = "0 / 600"; form.querySelector("[name=started]").value = String(Date.now()); done.hidden = false; done.focus(); loadPrayer(); }
         else err.textContent = d.error || "Sorry, it couldn’t be sent. Please try again.";
       }).catch(function () {
         err.textContent = "Sorry, it couldn’t be sent. Please check your connection. Your words are still in the box.";
