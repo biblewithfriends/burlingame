@@ -4,7 +4,7 @@ The church family's own site. Friends who are getting to know us go to [Bible wi
 
 ## Put this version on GitHub
 
-Every file keeps its old name, so this is one step:
+Drag in everything, including the `assets/icons` folder and `manifest.webmanifest`:
 
 1. In your repository, select **Add file → Upload files**.
 2. Drag in everything from this folder and select **Commit changes**. The new files replace the old ones.
@@ -22,6 +22,8 @@ Nothing changes on the Google side. The Google script and your form link are the
 | `resources.html` | 43 links, with search and topics |
 | `offering.html` | Offerings by check or PayPal |
 | `assets/` | `site.css` (the look), `site.js` (the behavior), `config.js` (the Google link) |
+| `assets/icons/` | The header logo, the browser-tab icon, and the home-screen app icon |
+| `manifest.webmanifest` | Lets people add the site to their phone's home screen as an app called "CiB" |
 | `google-sheet/` | The Google script and how to use the sheet |
 | `project-notes/` | Where each fact on the site came from |
 
