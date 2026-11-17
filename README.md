@@ -19,7 +19,7 @@ Nothing changes on the Google side. The Google script and your form link are the
 | `prayer.html` | Prayer: post a burden, this week and last week, answered prayers |
 | `newsletter.html` | Newsletter issues, newest on top |
 | `our-faith.html` | Who we are and what we believe, word for word from the church |
-| `resources.html` | 44 links, with search and topics |
+| `resources.html` | 43 links, with search and topics |
 | `offering.html` | Offerings by check or PayPal |
 | `assets/` | `site.css` (the look), `site.js` (the behavior), `config.js` (the Google link) |
 | `google-sheet/` | The Google script and how to use the sheet |

@@ -2,7 +2,8 @@
    Emerald field, soil ink, sprout-green highlight, big friendly type. */
 
 :root {
-  --paper: #f5f1e8;        /* dry earth */
+  --paper: #f8f3e9;        /* crème */
+  color-scheme: light;     /* stay light even when the device is in dark mode */
   --surface: #fffdf8;
   --ink: #2a1e14;          /* soil */
   --ink-2: #6b5a48;
@@ -20,22 +21,6 @@
   --r-lg: 28px;
   --r-md: 16px;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #15110b;
-    --surface: #221b12;
-    --ink: #f3ecdf;
-    --ink-2: #b9aa94;
-    --green: #0c6a47;
-    --green-deep: #0a5639;
-    --link: #8fdcae;
-    --leaf: #1e3a2a;
-    --line: #3a2f22;
-    --danger: #ff9a8a;
-    --ok: #143d2a;
-  }
-}
-
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 7rem; }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1.0625rem/1.55 var(--body); overflow-wrap: break-word; }
