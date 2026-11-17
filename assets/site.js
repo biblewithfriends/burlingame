@@ -1,175 +1,228 @@
-/* The Church in Burlingame — small helpers. */
+/* The Church in Burlingame — page behavior */
 (function () {
   "use strict";
+  var API = (window.CIB_FORM_URL || "").trim();
   var $ = function (id) { return document.getElementById(id); };
-  var URL_ = (window.CIB_FORM_URL || "").trim();
+  var MAX = 600;
 
-  function niceDate(s) {
-    if (!s) return "";
-    var d = new Date(s + "T12:00:00");
-    return isNaN(d) ? s : d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-  }
-  function el(tag, cls, text) {
+  function make(tag, cls, text) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
-    if (text != null) n.textContent = text;   // never treated as HTML
+    if (text != null) n.textContent = text;   // text only, never HTML
     return n;
   }
-  function load(action) {
-    return fetch(URL_ + "?action=" + action + "&t=" + Date.now()).then(function (r) { return r.json(); });
+  function day(s, opts) {
+    var d = new Date(s + "T12:00:00");
+    return isNaN(d) ? s : d.toLocaleDateString("en-US", opts || { month: "short", day: "numeric" });
+  }
+  function shift(s, n) {
+    var d = new Date(s + "T12:00:00"); d.setDate(d.getDate() + n);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function get(action) { return fetch(API + "?action=" + action + "&t=" + Date.now()).then(function (r) { return r.json(); }); }
+  function send(fields) { return fetch(API, { method: "POST", body: new URLSearchParams(fields) }).then(function (r) { return r.json(); }); }
+
+  /* Keep the current tab in view on small screens */
+  var here = document.querySelector('.tabs a[aria-current="page"]');
+  if (here) here.parentNode.scrollLeft = here.offsetLeft - 16;
+
+  /* ── Home: which meeting is next (Pacific time) ── */
+  var week = $("week");
+  if (week) {
+    var parts = {};
+    new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(new Date()).forEach(function (p) { parts[p.type] = p.value; });
+    var dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(parts.weekday);
+    var now = Number(parts.hour) * 60 + Number(parts.minute);
+    var clock = function (m, bare) {
+      var h = Math.floor(m / 60), mm = m % 60;
+      return (h % 12 || 12) + ":" + String(mm).padStart(2, "0") + (bare ? "" : h < 12 ? " AM" : " PM");
+    };
+    var best = null;
+    [].forEach.call(week.children, function (li) {
+      var d = Number(li.dataset.dow), a = Number(li.dataset.start), b = Number(li.dataset.end);
+      var live = d === dow && now >= a && now < b;
+      var wait = ((d - dow + 7) % 7) * 1440 + a - now;
+      if (wait < 0) wait += 7 * 1440;
+      if (live) wait = -1;
+      if (!best || wait < best.wait) best = { li: li, wait: wait, live: live, start: a, end: b };
+    });
+    if (dow > -1 && best) {
+      var li = best.li, dayName = li.querySelector(".day").firstChild.textContent;
+      best.li.classList.add("is-next");
+      if (best.live) {
+        li.querySelector(".tag").textContent = "Now";
+        $("next-label").textContent = "Happening now";
+        $("next-when").textContent = li.dataset.name;
+        $("next-what").textContent = "Until " + clock(best.end);
+      } else {
+        var ahead = Math.floor((now + best.wait) / 1440);
+        $("next-label").textContent = "Next up";
+        $("next-when").textContent =
+          ahead === 0 ? (best.start >= 1020 ? "Tonight at " + clock(best.start, true) : "Today at " + clock(best.start))
+          : ahead === 1 ? "Tomorrow at " + clock(best.start)
+          : dayName + " at " + clock(best.start);
+        $("next-what").textContent = li.dataset.name;
+      }
+    }
+    /* Live lines on the Prayer and Newsletter blocks */
+    if (API) {
+      get("prayer").then(function (d) {
+        if (!d.ok) return;
+        var n = d.thisWeek.length;
+        $("live-prayer").textContent = n ? n + (n === 1 ? " burden" : " burdens") + " this week" : "Nothing posted yet this week. Be the first.";
+      }).catch(function () {});
+      get("newsletter").then(function (d) {
+        if (d.ok && d.issues.length) $("live-news").textContent = "Latest: " + d.issues[0].title;
+      }).catch(function () {});
+    }
   }
 
-  /* ── Prayer list: this week, last week, answered ── */
-  var loadPrayer = function () {};
-  if ($("prayer-public")) {
-    var st = $("prayer-status");
-    var shortDate = function (s) { var d = new Date(s + "T12:00:00"); return isNaN(d) ? s : d.toLocaleDateString("en-US", { month: "long", day: "numeric" }); };
-    var addDays = function (s, n) { var d = new Date(s + "T12:00:00"); d.setDate(d.getDate() + n); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+  /* ── Prayer ── */
+  if ($("prayer")) {
+    var state = $("p-state"), toast = $("toast");
 
-    var fill = function (list, rows, answered) {
+    var render = function (list, rows, answered) {
       list.textContent = "";
-      rows.forEach(function (p) {
-        var li = el("li");
-        p.text.split(/\n+/).forEach(function (t) { li.appendChild(el("p", null, t)); });
-        li.appendChild(el("p", "date", "Added " + niceDate(p.dateAdded) + (answered && p.dateAnswered ? " · Answered " + niceDate(p.dateAnswered) : "")));
-        var actions = el("div", "item-actions no-print");
-        var del = el("button", "btn btn-small btn-del", "Delete");
-        del.type = "button";
-        del.setAttribute("aria-label", "Delete this prayer burden");
-        del.addEventListener("click", function () { askDelete(actions, p.id, del); });
-        actions.appendChild(del);
-        li.appendChild(actions);
-        list.appendChild(li);
+      rows.forEach(function (b) {
+        var li = make("li"), text = make("div", "text"), meta = make("div", "meta");
+        b.text.split(/\n+/).forEach(function (t) { text.appendChild(make("p", null, t)); });
+        meta.appendChild(make("span", null, answered && b.dateAnswered ? "Answered " + day(b.dateAnswered) : "Added " + day(b.dateAdded)));
+        var del = make("button", "textbtn", "Delete"); del.type = "button";
+        del.addEventListener("click", function () { confirmDelete(meta, del, b.id); });
+        meta.appendChild(del);
+        text.appendChild(meta); li.appendChild(text); list.appendChild(li);
       });
     };
 
-    /* Two-step delete: "Delete" → "Yes, delete it" / "Cancel" */
-    var askDelete = function (box, id, delBtn) {
-      delBtn.hidden = true;
-      var q = el("span", "confirm-q", "Delete this prayer burden?");
-      var yes = el("button", "btn btn-small btn-del-yes", "Yes, delete it"); yes.type = "button";
-      var no = el("button", "btn btn-small btn-ghost", "Cancel"); no.type = "button";
-      var reset = function () { [q, yes, no].forEach(function (n) { n.remove(); }); delBtn.hidden = false; delBtn.focus(); };
-      no.addEventListener("click", reset);
+    /* Step two of deleting: nothing is removed until "Yes, delete" */
+    var confirmDelete = function (meta, del, id) {
+      del.hidden = true;
+      var ask = make("span", "ask", "Delete this burden?");
+      var yes = make("button", "btn btn-red btn-sm", "Yes, delete"); yes.type = "button";
+      var no = make("button", "btn btn-line btn-sm", "Keep"); no.type = "button";
+      var back = function () { [ask, yes, no].forEach(function (n) { n.remove(); }); del.hidden = false; del.focus(); };
+      no.addEventListener("click", back);
       yes.addEventListener("click", function () {
         yes.disabled = no.disabled = true; yes.textContent = "Deleting…";
-        fetch(URL_, { method: "POST", body: new URLSearchParams({ action: "prayer-delete", id: id }) })
-          .then(function (r) { return r.json(); })
-          .then(function (d) {
-            if (d.ok) loadPrayer().then(function () { showUndo(id); });
-            else { reset(); q.textContent = d.error || "It couldn’t be deleted."; box.appendChild(q); }
-          })
-          .catch(function () { reset(); q.textContent = "It couldn’t be deleted. Please check your connection."; box.appendChild(q); });
+        send({ action: "prayer-delete", id: id }).then(function (d) {
+          if (!d.ok) throw new Error(d.error);
+          refresh().then(function () { offerUndo(id); });
+        }).catch(function (e) { back(); meta.appendChild(make("span", "ask", e && e.message ? e.message : "Couldn’t delete. Check your connection and try again.")); });
       });
-      box.appendChild(q); box.appendChild(yes); box.appendChild(no);
+      meta.appendChild(ask); meta.appendChild(yes); meta.appendChild(no);
       yes.focus();
     };
 
-    /* After a delete: "Deleted. Undo" — puts it back in the same place */
-    var showUndo = function (id) {
-      var bar = $("undo-bar"); bar.textContent = "";
-      bar.appendChild(el("span", null, "Prayer burden deleted. "));
-      var u = el("button", "btn btn-small btn-ghost", "Undo"); u.type = "button";
-      u.addEventListener("click", function () {
-        u.disabled = true; u.textContent = "Restoring…";
-        fetch(URL_, { method: "POST", body: new URLSearchParams({ action: "prayer-restore", id: id }) })
-          .then(function (r) { return r.json(); })
-          .then(function (d) {
-            if (d.ok) { bar.hidden = true; loadPrayer(); }
-            else { bar.textContent = d.error || "It couldn’t be restored."; }
-          })
-          .catch(function () { u.disabled = false; u.textContent = "Undo"; });
+    var offerUndo = function (id) {
+      toast.textContent = "";
+      toast.appendChild(make("span", null, "Burden deleted"));
+      var undo = make("button", "btn btn-sm", "Undo"); undo.type = "button";
+      var close = make("button", "x", "Dismiss"); close.type = "button";
+      close.addEventListener("click", function () { toast.hidden = true; });
+      undo.addEventListener("click", function () {
+        undo.disabled = true; undo.textContent = "Restoring…";
+        send({ action: "prayer-restore", id: id }).then(function (d) {
+          if (!d.ok) throw new Error(d.error);
+          toast.hidden = true; refresh();
+        }).catch(function (e) { toast.textContent = e && e.message ? e.message : "Couldn’t restore. It’s still in the sheet’s Deleted tab."; });
       });
-      bar.appendChild(u);
-      bar.hidden = false;
-      u.focus();
+      toast.appendChild(undo); toast.appendChild(close);
+      toast.hidden = false; undo.focus();
     };
 
-    loadPrayer = function (note) {
-      if (!URL_) { st.textContent = "The prayer list isn’t connected yet."; return; }
-      return load("prayer").then(function (d) {
+    var refresh = function () {
+      if (!API) { state.textContent = "The prayer list isn’t connected yet."; return Promise.resolve(); }
+      return get("prayer").then(function (d) {
         if (!d.ok) throw 0;
-        st.hidden = !note; if (note) st.textContent = note;
-        if (d.lastUpdated) { $("prayer-updated").textContent = "Last updated " + niceDate(d.lastUpdated); $("prayer-updated").hidden = false; }
-        $("week-of").textContent = "· week of " + shortDate(d.weekOf);
-        $("last-week-of").textContent = "· week of " + shortDate(addDays(d.weekOf, -7));
-        fill($("prayer-this"), d.thisWeek, false);
-        $("prayer-empty").hidden = d.thisWeek.length > 0;
-        fill($("prayer-last"), d.lastWeek, false);
-        $("prayer-last-wrap").hidden = d.lastWeek.length === 0;
-        fill($("prayer-answered"), d.answered, true);
-        $("prayer-answered-wrap").hidden = d.answered.length === 0;
-      }).catch(function () { st.hidden = false; st.textContent = "The prayer list couldn’t be loaded. Please try again later."; });
+        state.hidden = true;
+        var long = { month: "long", day: "numeric" };
+        $("this-of").textContent = "Week of " + day(d.weekOf, long);
+        $("last-of").textContent = "Week of " + day(shift(d.weekOf, -7), long);
+        render($("list-this"), d.thisWeek); $("g-this").hidden = false; $("this-empty").hidden = d.thisWeek.length > 0;
+        render($("list-last"), d.lastWeek); $("g-last").hidden = !d.lastWeek.length;
+        render($("list-answered"), d.answered, true); $("g-answered").hidden = !d.answered.length;
+        if (d.lastUpdated) { $("p-updated").textContent = "Last updated " + day(d.lastUpdated, { month: "long", day: "numeric", year: "numeric" }); $("p-updated").hidden = false; }
+      }).catch(function () { state.hidden = false; state.textContent = "Couldn’t load the prayer list. Refresh the page to try again."; });
     };
-    loadPrayer();
-  }
+    refresh();
 
-  /* ── Share a burden ── */
-  var form = $("share-form");
-  if (form) {
-    var body = $("s-body"), count = $("s-count"), err = $("s-err"), done = $("s-done");
-    form.querySelector("[name=started]").value = String(Date.now());
+    var form = $("composer"), body = $("c-body"), count = $("c-count"), msg = $("c-msg"), post = $("c-post");
+    var stamp = function () { form.elements.started.value = String(Date.now()); };
+    stamp();
     body.addEventListener("input", function () {
       var n = body.value.trim().length;
-      count.textContent = n + " / 600";
-      count.classList.toggle("over", n > 600);
-      done.hidden = true;
+      count.textContent = n + " of " + MAX;
+      count.classList.toggle("over", n > MAX);
+      msg.textContent = "";
     });
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var n = body.value.trim().length;
-      err.textContent = !n ? "Please write the prayer burden." : n > 600 ? "Please shorten it to 600 characters or fewer." : "";
-      if (err.textContent) { body.focus(); return; }
-      if (!URL_) { err.textContent = "Sharing isn’t connected yet."; return; }
-      var btn = form.querySelector("button"); btn.disabled = true; btn.textContent = "Sending…";
-      var data = new URLSearchParams(new FormData(form)); data.append("action", "prayer-request");
-      fetch(URL_, { method: "POST", body: data }).then(function (r) { return r.json(); }).then(function (d) {
-        if (d.ok) { form.reset(); count.textContent = "0 / 600"; form.querySelector("[name=started]").value = String(Date.now()); done.hidden = false; done.focus(); loadPrayer(); }
-        else err.textContent = d.error || "Sorry, it couldn’t be sent. Please try again.";
-      }).catch(function () {
-        err.textContent = "Sorry, it couldn’t be sent. Please check your connection. Your words are still in the box.";
-      }).then(function () { btn.disabled = false; btn.textContent = "Send"; });
+      msg.textContent = !n ? "Write a burden first." : n > MAX ? "Shorten it to " + MAX + " characters." : !API ? "Posting isn’t connected yet." : "";
+      if (msg.textContent) { body.focus(); return; }
+      post.disabled = true; post.textContent = "Posting…";
+      var fields = new URLSearchParams(new FormData(form)); fields.append("action", "prayer-request");
+      send(fields).then(function (d) {
+        if (!d.ok) throw new Error(d.error);
+        form.reset(); stamp(); count.textContent = "0 of " + MAX;
+        msg.textContent = "Posted. It’s in this week’s list.";
+        refresh();
+      }).catch(function (e) {
+        msg.textContent = e && e.message && e.message !== "Failed to fetch" ? e.message : "Couldn’t post. Check your connection. Your words are still here.";
+      }).then(function () { post.disabled = false; post.textContent = "Post burden"; });
     });
   }
 
   /* ── Newsletter ── */
-  if ($("news-list")) {
-    var ns = $("news-status");
-    if (!URL_) ns.textContent = "The newsletter list isn’t connected yet.";
-    else load("newsletter").then(function (d) {
+  var issues = $("issues");
+  if (issues) {
+    var ns = $("n-state");
+    if (!API) ns.textContent = "Newsletters aren’t connected yet.";
+    else get("newsletter").then(function (d) {
       if (!d.ok) throw 0;
       ns.hidden = true;
-      $("news-empty").hidden = d.issues.length > 0;
-      d.issues.forEach(function (i) {
-        var li = el("li");
-        var t = el("p", "title");
-        if (/^https:\/\//.test(i.link)) { var a = el("a", null, i.title); a.href = i.link; t.appendChild(a); } else t.textContent = i.title;
-        li.appendChild(t);
-        li.appendChild(el("p", "date", niceDate(i.date)));
-        $("news-list").appendChild(li);
+      $("n-empty").hidden = d.issues.length > 0;
+      d.issues.forEach(function (i, k) {
+        var li = make("li", k === 0 ? "latest" : "");
+        var when = make("time", null, (k === 0 ? "Latest, " : "") + day(i.date, { month: "long", day: "numeric", year: "numeric" }));
+        var t = make("span", "t");
+        if (/^https:\/\//.test(i.link)) { var a = make("a", null, i.title); a.href = i.link; t.appendChild(a); } else t.textContent = i.title;
+        if (k === 0) { li.appendChild(when); li.appendChild(t); } else { li.appendChild(t); li.appendChild(when); }
+        issues.appendChild(li);
       });
-    }).catch(function () { ns.textContent = "The newsletters couldn’t be loaded. Please try again later."; });
+    }).catch(function () { ns.textContent = "Couldn’t load the newsletters. Refresh the page to try again."; });
   }
 
-  /* ── Resources: topics + search ── */
-  var root = $("resources");
-  if (root) {
-    var items = [].slice.call(root.querySelectorAll("li[data-cat]"));
-    var groups = [].slice.call(root.querySelectorAll(".res-group"));
-    var chips = [].slice.call(document.querySelectorAll(".filters button"));
-    var q = $("res-q"), status = $("res-status"), cat = "all";
-    function run() {
-      var term = q.value.trim().toLowerCase(), shown = 0;
-      items.forEach(function (i) {
-        var ok = (cat === "all" || i.dataset.cat === cat) && (!term || i.textContent.toLowerCase().indexOf(term) > -1);
-        i.hidden = !ok; if (ok) shown++;
+  /* ── Offerings: copy buttons ── */
+  [].forEach.call(document.querySelectorAll("[data-copy]"), function (b) {
+    b.addEventListener("click", function () {
+      var text = b.dataset.copy;
+      var done = function () { b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 2000); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { b.textContent = "Press and hold to copy"; });
+      else { var t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); done(); } catch (e) {} t.remove(); }
+    });
+  });
+
+  /* ── Resources: search and topics ── */
+  var shelves = $("shelves");
+  if (shelves) {
+    var find = $("find"), note = $("r-state"), topic = "all";
+    var chips = [].slice.call(document.querySelectorAll(".chips button"));
+    var filter = function () {
+      var q = find.value.trim().toLowerCase(), total = 0;
+      [].forEach.call(shelves.children, function (shelf) {
+        var shown = 0, inTopic = topic === "all" || shelf.dataset.cat === topic;
+        [].forEach.call(shelf.querySelectorAll("li"), function (li) {
+          var ok = inTopic && (!q || li.textContent.toLowerCase().indexOf(q) > -1);
+          li.hidden = !ok; if (ok) shown++;
+        });
+        shelf.hidden = !shown; total += shown;
       });
-      groups.forEach(function (g) { g.hidden = !g.querySelector("li:not([hidden])"); });
-      chips.forEach(function (c) { c.setAttribute("aria-pressed", String(c.dataset.cat === cat)); });
-      status.textContent = shown ? (cat === "all" && !term ? "" : shown + (shown === 1 ? " resource" : " resources")) : "Nothing matches. Try another word, or choose All.";
-    }
-    chips.forEach(function (c) { c.addEventListener("click", function () { cat = c.dataset.cat; run(); }); });
-    $("res-search").addEventListener("submit", function (e) { e.preventDefault(); run(); });
-    q.addEventListener("input", run);
+      chips.forEach(function (c) { c.setAttribute("aria-pressed", String(c.dataset.cat === topic)); });
+      note.textContent = !total ? "No matches. Try another word, or choose All." : (q || topic !== "all") ? total + (total === 1 ? " resource" : " resources") : "";
+    };
+    chips.forEach(function (c) { c.addEventListener("click", function () { topic = c.dataset.cat; filter(); }); });
+    find.addEventListener("input", filter);
   }
 })();

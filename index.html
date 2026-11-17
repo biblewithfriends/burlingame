@@ -4,66 +4,57 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Church in Burlingame</title>
-<meta name="description" content="Meetings, prayer, and news for the church in Burlingame.">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#004990">
+<meta name="theme-color" content="#0b6b47">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<header class="top">
-  <div class="wrap">
-    <a class="brand" href="index.html">The Church in Burlingame</a>
-    <nav class="nav-wide" aria-label="Main"><ul class="nav"><li><a href="index.html" aria-current="page">Home</a></li><li><a href="newsletter.html">Newsletter</a></li><li><a href="our-faith.html">Our Faith</a></li><li><a href="prayer.html">Prayer</a></li><li><a href="resources.html">Resources</a></li><li><a href="offering.html">Offerings</a></li></ul></nav>
-    <details class="menu"><summary>Menu</summary><nav aria-label="Main"><ul class="nav"><li><a href="index.html" aria-current="page">Home</a></li><li><a href="newsletter.html">Newsletter</a></li><li><a href="our-faith.html">Our Faith</a></li><li><a href="prayer.html">Prayer</a></li><li><a href="resources.html">Resources</a></li><li><a href="offering.html">Offerings</a></li></ul></nav></details>
-  </div>
-</header>
+<header class="bar"><div class="wrap bar-in">
+  <a class="brand" href="index.html">The Church in Burlingame</a>
+  <nav class="tabs" aria-label="Main"><a href="index.html" aria-current="page">Home</a><a href="newsletter.html">Newsletter</a><a href="our-faith.html">Our Faith</a><a href="prayer.html">Prayer</a><a href="resources.html">Resources</a><a href="offering.html">Offerings</a></nav>
+</div></header>
 <main id="main">
 
-<div class="head"><div class="wrap">
-  <span class="kicker">The church in Burlingame</span>
-  <h1>A community for all God’s children</h1>
-  <p>Our meetings, prayer burdens, and news — for the church family.</p>
-</div></div>
-
-<section class="block" id="meetings" aria-labelledby="h-week"><div class="wrap">
-  <h2 id="h-week">Every week</h2>
-  <ul class="week"><li><span class="day">Sunday</span><p class="name">Lord’s Table Meeting</p><p class="time">9:30 – 11:30 AM</p></li><li><span class="day">Tuesday</span><p class="name">Prayer Meeting</p><p class="time">7:30 – 8:30 PM</p></li><li><span class="day">Friday</span><p class="name">Small Group Meeting</p><p class="time">6:30 – 9:00 PM</p></li></ul>
-  <div class="where">
+<section class="hero"><div class="wrap">
+  <p class="hero-label" id="next-label">Every week</p>
+  <h1 id="next-when">Sunday, Tuesday, Friday</h1>
+  <p class="hero-what" id="next-what">Three times together, every week</p>
+  <ul class="week" id="week"><li data-dow="0" data-start="570" data-end="690" data-name="Lord’s Table Meeting"><span class="day">Sunday<span class="tag">Next</span></span><span>Lord’s Table Meeting</span><span>9:30 to 11:30 AM</span></li><li data-dow="2" data-start="1170" data-end="1230" data-name="Prayer Meeting"><span class="day">Tuesday<span class="tag">Next</span></span><span>Prayer Meeting</span><span>7:30 to 8:30 PM</span></li><li data-dow="5" data-start="1110" data-end="1260" data-name="Small Group Meeting"><span class="day">Friday<span class="tag">Next</span></span><span>Small Group Meeting</span><span>6:30 to 9:00 PM</span></li></ul>
+  <div class="place">
     <address>859 Cowan Rd, Burlingame, CA 94010</address>
-    <span class="muted">Step-free access and an elevator</span>
-    <a href="https://www.google.com/maps/dir/?api=1&destination=859+Cowan+Rd%2C+Burlingame%2C+CA+94010">Directions</a>
+    <span>Step-free access and an elevator</span>
+    <a class="btn btn-sprout" href="https://www.google.com/maps/dir/?api=1&destination=859+Cowan+Rd%2C+Burlingame%2C+CA+94010">Get directions</a>
   </div>
-</div></section>
-
-<section class="block" aria-labelledby="h-around"><div class="wrap">
-  <h2 id="h-around">Around the church</h2>
-  <ul class="tiles">
-    <li><a href="newsletter.html"><strong>Newsletter</strong><span>News from the church.</span></a></li>
-    <li><a href="our-faith.html"><strong>Our Faith</strong><span>Who we are and what we believe.</span></a></li>
-    <li><a href="prayer.html"><strong>Prayer</strong><span>Current burdens, and a place to share one.</span></a></li>
-    <li><a href="resources.html"><strong>Resources</strong><span>Bible, hymns, ministry books, and other local churches.</span></a></li>
-    <li><a href="offering.html"><strong>Offerings</strong><span>By check or PayPal.</span></a></li>
-  </ul>
 </div></section>
 
 <section class="block"><div class="wrap">
+  <p class="motto">A community for all God’s children</p>
+  <ul class="jump">
+    <li class="big"><a href="prayer.html"><b>Prayer</b><span id="live-prayer">This week’s burdens, and a place to post yours</span></a></li>
+    <li class="big"><a href="newsletter.html"><b>Newsletter</b><span id="live-news">News from the church</span></a></li>
+    <li><a href="our-faith.html"><b>Our Faith</b><span>Who we are and what we believe</span></a></li>
+    <li><a href="resources.html"><b>Resources</b><span>Bible, hymns, ministry, and other local churches</span></a></li>
+    <li><a href="offering.html"><b>Offerings</b><span>Give by check or PayPal</span></a></li>
+  </ul>
+</div></section>
+
+<section class="block" style="padding-top:0"><div class="wrap">
   <div class="friend">
-    <div><h2>Inviting a friend?</h2><p>Bible with Friends is our page for people just getting to know us.</p></div>
-    <a class="btn btn-light" href="https://biblewithfriends.github.io/bwf/">Open Bible with Friends</a>
+    <div><h2>Inviting a friend?</h2><p>Bible with Friends is the page for people who are just getting to know us.</p></div>
+    <a class="btn btn-ink" href="https://biblewithfriends.github.io/bwf/">Open Bible with Friends</a>
   </div>
 </div></section>
 
 </main>
-<footer class="foot">
-  <div class="wrap">
-    <p>The church in Burlingame</p>
-    
-  </div>
-</footer>
+<footer class="foot"><div class="wrap">
+  <p>The church in Burlingame</p>
+  
+</div></footer>
+<script src="assets/config.js"></script>
 <script src="assets/site.js"></script>
 </body>
 </html>
