@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#004990">
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=6">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=6">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=6">
+<link rel="manifest" href="site.webmanifest?v=6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bible Inventory">
+<title>Bible Inventory Log</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: mode switch on top; form on the left, overview and charts on the right; log full width below.
+   Colors and type follow the Bible with Friends site (biblewithfriends.github.io/bwf), a light-only theme. */
+:root{
+  --bg:#FAF7F0; --surface:#FFFFFF; --soft:#F4EFE4; --ink:#004990; --text:#3E4F6E; --muted:#5B6B85; --line:#EEE8DA;
+  --navy:#004990; --navy-deep:#00376D; --sky:#C9D3E6;
+  --accent:#E8C796; --accent-ink:#004990; --accent-soft:#F7EEDF; --accent-text:#7D5A2C;
+  --sel:#004990; --sel-ink:#FFFFFF;
+  --en:#004990; --es:#D2A867; --cn:#7FA3CE;
+  --c1:#004990; --c2:#E8C796; --c3:#7FA3CE; --c4:#7D5A2C; --c5:#5B6B85; --c6:#C9D3E6; --c7:#B68D52; --c8:#00376D;
+  --warn-bg:#E8C796; --warn:#00376D; --bad:#9B2C2C; --bad-bg:#9B2C2C; --bad-ink:#FFFFFF;
+  --display:"Poppins", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  --body:"Poppins", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  --radius:18px;
+  color-scheme:light;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.5;margin:0}
+[data-mode="in"] .dist-only, [data-mode="out"] .inv-only{display:none!important}
+.wrap{max-width:1100px;margin:0 auto;padding-block:28px 56px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:flex;flex-direction:column;gap:20px}
+h1,h2{font-family:var(--display);font-weight:700;color:var(--ink);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(1.7rem,4vw,2.3rem);line-height:1.15}
+h2{font-size:1.2rem}
+.sub{color:var(--muted);margin:4px 0 0}
+.num{font-variant-numeric:tabular-nums}
+.label{font-size:.72rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+
+header.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:12px}
+.mark{width:58px;height:43px;flex:none}
+.logo h1{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:12px;row-gap:2px;font-size:clamp(1.35rem,3.4vw,1.9rem);line-height:1.2}
+.logo .church{font-weight:600;color:var(--navy)}
+.logo .divider{color:var(--accent);font-weight:400}
+.logo .app{font-weight:700;color:var(--navy)}
+@media (max-width:640px){.logo .divider{display:none}.logo h1{flex-direction:column;align-items:flex-start}.logo .church{font-size:.62em;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-text)}}
+.status{font-size:.82rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--navy)}
+.banner{background:var(--accent-soft);color:var(--accent-text);border:1px solid var(--accent);border-radius:var(--radius);padding:10px 14px;font-size:.9rem}
+
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px;gap:4px;max-width:420px;width:100%}
+.seg button{border:0;background:transparent;color:var(--muted);font:600 1rem var(--body);padding:11px 8px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--sel);color:var(--sel-ink)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+
+/* form */
+form{display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field > span,.field > .flabel{font-size:.85rem;font-weight:600}
+.field small{color:var(--muted);font-size:.78rem;font-weight:400}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:420px){.row3{gap:8px}}
+.row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+input,textarea{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:84px}
+input:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 .88rem var(--body);padding:7px 13px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--sel);border-color:var(--sel);color:var(--sel-ink)}
+.qty input{font-size:1.15rem;font-weight:600;font-variant-numeric:tabular-nums}
+.qty .field > span{display:flex;align-items:center;gap:6px;font-size:.82rem}
+.sw{width:10px;height:10px;border-radius:2px;display:inline-block;flex:none}
+.sw.en{background:var(--en)} .sw.es{background:var(--es)} .sw.cn{background:var(--cn)}
+.suggest{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.82rem;color:var(--muted)}
+.suggest button{border:1px dashed var(--accent-text);background:var(--accent-soft);color:var(--ink);font:600 .82rem var(--body);padding:4px 10px;border-radius:999px;cursor:pointer}
+fieldset.stats{border:1px solid var(--line);border-radius:10px;padding:12px 14px 14px;margin:0;min-width:0}
+fieldset.stats legend{padding:0 6px;font-size:.85rem;font-weight:600}
+fieldset.stats legend small{font-weight:400;color:var(--muted)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 12px;margin-top:4px}
+.stat-grid label{display:flex;flex-direction:column;justify-content:space-between;gap:4px;font-size:.8rem;color:var(--muted)}
+.stat-grid input{padding:7px 9px;font-variant-numeric:tabular-nums}
+.btn{border:0;background:var(--accent);color:var(--accent-ink);font:600 1rem var(--body);padding:13px 22px;border-radius:999px;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:progress}
+.btn.ghost{background:var(--surface);color:var(--navy);border:1px solid var(--line);font-size:.9rem;padding:8px 14px;font-weight:600}
+.msg{font-size:.9rem;min-height:1.3em;margin:0}
+.msg.ok{color:var(--navy)} .msg.err{color:var(--bad)}
+
+/* overview */
+.stock{width:100%;border-collapse:collapse}
+.stock th,.stock td{padding:8px 0;text-align:right;border-bottom:1px solid var(--line)}
+.stock th:first-child,.stock td:first-child{text-align:left}
+.stock thead th{font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.stock thead th span{display:inline-flex;align-items:center;gap:5px}
+.inventory{background:var(--navy-deep);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:14px;color:#FFFFFF;min-width:0}
+.inventory .label{color:var(--accent)}
+.inventory h2{color:#FFFFFF}
+.inv-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.inv-tiles div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.inv-tiles b{font-family:var(--display);font-size:clamp(1.6rem,5vw,2.2rem);line-height:1.1;font-variant-numeric:tabular-nums}
+.inv-tiles span{font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.inv-tiles em{font-style:normal}
+.pill{display:inline-block;font:700 .66rem var(--body);letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:var(--warn-bg);color:var(--warn)}
+.pill.bad{background:var(--bad-bg);color:var(--bad-ink)}
+.yearstats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin:0}
+.yearstats div{display:flex;flex-direction:column;gap:2px}
+.yearstats dt{font-size:.76rem;color:var(--muted);order:2}
+.yearstats dd{margin:0;font-family:var(--display);font-weight:700;font-size:1.2rem;font-variant-numeric:tabular-nums;order:1}
+
+.month-nav{display:flex;align-items:center;gap:6px}
+.month-nav button{border:1px solid var(--line);background:var(--surface);color:var(--navy);font:600 1rem var(--body);width:32px;height:32px;border-radius:999px;cursor:pointer;line-height:1}
+.month-nav button:disabled{opacity:.35;cursor:default}
+details.outreach{border-top:1px solid var(--line);padding-top:12px}
+details.outreach summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;font-size:.78rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+details.outreach summary::-webkit-details-marker{display:none}
+details.outreach summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--navy);border-bottom:2px solid var(--navy);transform:rotate(45deg);margin-right:6px;transition:transform .2s}
+details.outreach[open] summary::after{transform:rotate(-135deg)}
+details.outreach[open] .yearstats{margin-top:10px}
+.share{display:flex;flex-wrap:wrap;gap:10px;align-items:center;border-top:1px solid rgba(255,255,255,.15);padding-top:14px}
+.share .btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font-size:.95rem;padding:11px 18px}
+.share-copy{background:var(--accent);color:var(--navy-deep)}
+.share-msg{font-size:.85rem;color:var(--accent)}
+.share-note{margin:0;font-size:.78rem;color:rgba(255,255,255,.75)}
+#shareFallback{width:100%;min-height:150px;font-size:14px;background:#FFFFFF;color:var(--text)}
+@media (max-width:640px){.share .btn{flex:1 1 140px}}
+/* pie */
+.pie-wrap{display:grid;grid-template-columns:180px minmax(0,1fr);gap:20px;align-items:center}
+@media (max-width:460px){.pie-wrap{grid-template-columns:1fr;justify-items:center}}
+.pie-wrap svg{width:180px;height:180px;max-width:100%}
+.pie-total{font-family:var(--display);font-weight:700;fill:var(--ink)}
+.pie-cap{font-family:var(--body);font-size:11px;fill:var(--muted)}
+.plegend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;width:100%}
+.plegend li{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:.9rem}
+.plegend i{width:12px;height:12px;border-radius:3px}
+.plegend span:last-child{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* locations */
+.locs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.locs li{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) 3ch;gap:10px;align-items:center;font-size:.88rem}
+.locs .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.locs .track{height:12px;background:var(--soft);border-radius:3px;overflow:hidden}
+.locs .track i{display:block;height:100%;background:var(--navy);border-radius:3px}
+.locs b{text-align:right;font-variant-numeric:tabular-nums}
+
+/* log */
+.tablewrap{overflow-x:auto;margin:0 -4px}
+table.log{width:100%;border-collapse:collapse;font-size:.88rem;min-width:680px}
+.log th{text-align:left;font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line)}
+.log td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.log td.n,.log th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.log td.d{white-space:nowrap;color:var(--muted);font-variant-numeric:tabular-nums}
+.log .note{color:var(--muted);font-size:.8rem;display:block}
+.log .testi{font-style:italic}
+.tag{display:inline-block;font-size:.76rem;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--soft);white-space:nowrap}
+.plus{color:var(--accent-text);font-weight:600}
+footer{color:var(--muted);font-size:.8rem;text-align:center}
+
+/* touch devices: comfortable tap targets, no zoom-on-focus on iPhone */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,.chip,.seg button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+@media (pointer:coarse){
+  input,textarea{font-size:16px}
+  .qty input{font-size:1.2rem}
+  .chip{padding:10px 15px;min-height:44px}
+  .seg button{min-height:46px}
+  .btn{min-height:50px}
+  .month-nav button{width:44px;height:44px}
+  .suggest button{padding:8px 12px;min-height:36px}
+}
+
+/* phones */
+@media (max-width:860px){
+  .col{display:contents}
+  .grid > .col > .inventory{order:-1}
+  .grid > section{order:0}
+  .grid > .col > .card{order:1}
+}
+@media (max-width:640px){
+  .wrap{padding-block:18px 40px;gap:16px}
+  .grid{gap:16px}
+  .card,.inventory{padding:16px;gap:14px}
+  .seg{max-width:none}
+  .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stock th,.stock td{padding:7px 0;font-size:.9rem}
+  .stock td:first-child{padding-right:8px}
+  .locs li{grid-template-columns:minmax(0,110px) minmax(0,1fr) 3ch}
+  .card-head .month-nav{width:100%;justify-content:space-between}
+  /* log as stacked rows instead of a wide table */
+  .tablewrap{overflow:visible;margin:0}
+  table.log{min-width:0}
+  .log thead{display:none}
+  .log tbody, .log tr{display:block}
+  .log tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 10px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .log td{border:0;padding:0;min-width:0}
+  .log td.d{grid-column:1 / 3}
+  .log td.p{grid-column:3;text-align:right}
+  .log td.loc{grid-column:1 / -1;font-weight:600}
+  .log td.who{grid-column:1 / -1}
+  .log td.n{text-align:left;font-weight:600}
+  .log td.n::before{content:attr(data-l);display:block;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .log td[colspan]{grid-column:1 / -1}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="logo">
+        <svg class="mark" viewBox="4 0 146 108" aria-hidden="true"><g transform="translate(9 0) scale(0.88)"><path d="M36.6 8.3 L68.2 19.4 Q72 20.7 72 24.7 L72 70 Q72 74 68 74.8 L42 79.8 C36.5 81.4 31.5 84.4 27.6 87.6 C25.4 89.4 23.2 88.3 24.4 86.4 C27.6 82.4 30 78.5 30 70 L30 13 Q30 6 36.6 8.3 Z" fill="#004990" stroke="#004990" stroke-width="3" stroke-linejoin="round"/><path d="M117.4 8.3 L85.8 19.4 Q82 20.7 82 24.7 L82 70 Q82 74 86 74.8 L112 79.8 C117.5 81.4 122.5 84.4 126.4 87.6 C128.6 89.4 130.8 88.3 129.6 86.4 C126.4 82.4 124 78.5 124 70 L124 13 Q124 6 117.4 8.3 Z" fill="#E8C796" stroke="#E8C796" stroke-width="3" stroke-linejoin="round"/></g><path d="M22 62 L10 50 M132 62 L144 50" stroke="#00376D" stroke-width="5" stroke-linecap="round" fill="none"/><rect x="20" y="60" width="114" height="44" rx="5" fill="#00376D"/><rect x="66" y="60" width="22" height="16" fill="#E8C796"/></svg>
+        <h1><span class="church">Church in Burlingame</span><span class="divider" aria-hidden="true">|</span><span class="app">Bible Inventory Log</span></h1>
+      </div>
+      <p class="sub">English, Spanish, and Chinese New Testaments. Log what you hand out or bring in.</p>
+    </div>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">Loading…</span></div>
+  </header>
+
+  <div class="banner" id="previewBanner" hidden>Preview mode: showing a copy of the log. New entries appear here but are not saved until the site is connected to the Google Sheet.</div>
+
+  <div class="seg" role="group" aria-label="Show">
+    <button type="button" id="typeOut" aria-pressed="true">Distribution</button>
+    <button type="button" id="typeIn" aria-pressed="false">Inventory</button>
+  </div>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="formTitle">
+      <div class="card-head"><h2 id="formTitle">Log a distribution</h2></div>
+      <p class="sub inv-only" style="margin:0">Enter how many New Testaments were ordered or brought in.</p>
+      <form id="entryForm" novalidate>
+        <div class="field dist-only">
+          <span id="purposeLabel">Purpose</span>
+          <div class="chips" id="chips" role="group" aria-labelledby="purposeLabel"></div>
+        </div>
+
+        <div class="row3 qty">
+          <label class="field"><span><i class="sw en"></i>English</span><input id="qtyEn" type="number" inputmode="numeric" min="0" max="5000" placeholder="0"></label>
+          <label class="field"><span><i class="sw es"></i>Spanish</span><input id="qtyEs" type="number" inputmode="numeric" min="0" max="5000" placeholder="0"></label>
+          <label class="field"><span><i class="sw cn"></i>Chinese</span><input id="qtyCn" type="number" inputmode="numeric" min="0" max="5000" placeholder="0"></label>
+        </div>
+
+        <div class="row2">
+          <div class="field dist-only">
+            <label class="flabel" for="location">Location</label>
+            <input id="location" type="text" maxlength="80" list="locList" autocomplete="off" placeholder="City or venue, e.g. Daly City DMV">
+            <datalist id="locList"></datalist>
+            <div class="suggest" id="locSuggest" hidden></div>
+          </div>
+          <label class="field"><span>Date</span><input id="date" type="date" required></label>
+        </div>
+
+        <fieldset class="stats dist-only">
+          <legend>Outreach stats <small>optional</small></legend>
+          <div class="stat-grid" id="statFields"></div>
+        </fieldset>
+
+        <label class="field"><span id="nameLabel">Your name</span><input id="name" type="text" maxlength="80" autocomplete="name" placeholder="Name, or names of everyone who went" required></label>
+        <label class="field"><span id="notesLabel">Testimonials <small>optional · share during prayer meeting or the Lord's Day</small></span><textarea id="notes" maxlength="1000" placeholder="Who did you meet? How did the Lord move?"></textarea></label>
+
+        <button class="btn" type="submit" id="submitBtn">Submit distribution</button>
+        <p class="msg" id="formMsg" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <div class="col">
+      <section class="inventory" aria-labelledby="invTitle">
+        <div class="card-head"><h2 id="invTitle">Current Inventory</h2><span class="label">Bibles on hand now</span></div>
+        <div class="inv-tiles">
+          <div><b id="hand-en">0</b><span>English <em id="flag-en"></em></span></div>
+          <div><b id="hand-es">0</b><span>Spanish <em id="flag-es"></em></span></div>
+          <div><b id="hand-cn">0</b><span>Chinese <em id="flag-cn"></em></span></div>
+        </div>
+        <div class="share">
+          <button type="button" class="btn share-copy" id="shareCopy">Copy stats</button>
+          <span class="share-msg" id="shareMsg" role="status" aria-live="polite"></span>
+        </div>
+        <p class="share-note">Shares current inventory, this month and this year.</p>
+        <textarea id="shareFallback" readonly hidden></textarea>
+      </section>
+
+      <section class="card" aria-labelledby="monthTitle">
+        <div class="card-head">
+          <h2 id="monthTitle">Monthly Overview</h2>
+          <div class="month-nav">
+            <span class="label" id="monthRange"></span>
+            <button type="button" id="monthPrev" aria-label="Previous month">‹</button>
+            <button type="button" id="monthNext" aria-label="Next month">›</button>
+          </div>
+        </div>
+        <table class="stock num">
+          <thead><tr><th></th><th><span><i class="sw en"></i>English</span></th><th><span><i class="sw es"></i>Spanish</span></th><th><span><i class="sw cn"></i>Chinese</span></th></tr></thead>
+          <tbody>
+            <tr><td>Bibles Ordered</td><td id="m-in-en">0</td><td id="m-in-es">0</td><td id="m-in-cn">0</td></tr>
+            <tr><td>Bibles Distributed</td><td id="m-out-en">0</td><td id="m-out-es">0</td><td id="m-out-cn">0</td></tr>
+          </tbody>
+        </table>
+        <details class="outreach dist-only">
+          <summary>Outreach this month</summary>
+          <dl class="yearstats" id="monthStats"></dl>
+        </details>
+      </section>
+
+      <section class="card" aria-labelledby="stockTitle">
+        <div class="card-head"><h2 id="stockTitle">2026 Annual Overview</h2><span class="label">Jan 1 to today</span></div>
+        <table class="stock num">
+          <thead><tr><th></th><th><span><i class="sw en"></i>English</span></th><th><span><i class="sw es"></i>Spanish</span></th><th><span><i class="sw cn"></i>Chinese</span></th></tr></thead>
+          <tbody>
+            <tr><td>Bibles Ordered</td><td id="in-en">0</td><td id="in-es">0</td><td id="in-cn">0</td></tr>
+            <tr><td>Bibles Distributed</td><td id="out-en">0</td><td id="out-es">0</td><td id="out-cn">0</td></tr>
+          </tbody>
+        </table>
+        <details class="outreach dist-only">
+          <summary>Outreach this year</summary>
+          <dl class="yearstats" id="yearStats"></dl>
+        </details>
+      </section>
+
+      <section class="card dist-only" aria-labelledby="purpTitle">
+        <div class="card-head"><h2 id="purpTitle">Distribution Statistics by Purpose</h2></div>
+        <div class="pie-wrap" id="pie"></div>
+      </section>
+
+      <section class="card dist-only" aria-labelledby="locTitle">
+        <div class="card-head"><h2 id="locTitle">Distribution by Location</h2><span class="label">Bibles, all languages</span></div>
+        <ul class="locs" id="locs"></ul>
+      </section>
+    </div>
+  </div>
+
+  <section class="card" aria-labelledby="logTitle">
+    <div class="card-head"><h2 id="logTitle">Distribution log</h2><span class="label" id="logCount"></span></div>
+    <div class="tablewrap">
+      <table class="log">
+        <thead><tr><th>Date</th><th>Purpose</th><th class="dist-only">Location</th><th id="nameHead">Name</th><th class="n">English</th><th class="n">Spanish</th><th class="n">Chinese</th></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+    <div><button class="btn ghost" type="button" id="moreBtn" hidden>Show all entries</button></div>
+  </section>
+
+  <footer>Entries are saved to the shared Bible Inventory Log spreadsheet.</footer>
+</div>
+
+<script>
+/* ===== Settings =====
+   Paste the Web app URL from Google Apps Script between the quotes.
+   Leave it empty to run in preview mode. */
+const API_URL = "https://script.google.com/macros/s/AKfycbyBVZaYZoZbLq4gcDsWX2t1uGxelvTuq6Bxdeyx3se7oJrkm3l7ICPmcNNVUERik6TS/exec";
+
+const SEED = [];
+const DEFAULT_PURPOSES = ["DMV", "Community", "Campus", "YP", "Children"];
+const RETIRED_PURPOSES = ["Distribution", "College Tabling"]; // older labels: still shown, not offered as buttons
+const IN_PURPOSES = ["Restock", "Initial Inventory"];
+const LOW_STOCK = 30;
+const LANGS = [["en","english","English"],["es","spanish","Spanish"],["cn","chinese","Chinese"]];
+// Optional counts, matching the NorCal TSUF Statistics form
+const STATS = [
+  ["tracts","Tracts or flyers"], ["books","Spiritual books or booklets"],
+  ["contacted","Contacted > 30 seconds"], ["prayed","Prayed to receive the Lord"],
+  ["baptized","Baptized"], ["appt2","Had a 2nd appointment"],
+  ["apptRegular","Regular appointments (> 3)"], ["smallGroup","Now meeting in a small group"]
+];
+const CAT = ["--c1","--c2","--c3","--c4","--c5","--c6","--c7","--c8"];
+
+const $ = id => document.getElementById(id);
+let entries = [];
+let type = "out";
+let purpose = "DMV";
+let showAll = false;
+let monthOffset = 0; // 0 = this month, 1 = last month, ...
+
+function todayISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
+function fmtDate(iso){const [y,m,d]=iso.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function norm(e){const o={...e};for(const [,k] of LANGS)o[k]=Number(o[k])||0;return o}
+function isIn(e){return LANGS.some(([,k])=>e[k]>0)}
+function given(e){return LANGS.reduce((s,[,k])=>s-Math.min(e[k],0),0)}
+function key(s){return String(s||"").toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()}
+
+/* ---------- location matching ---------- */
+function locations(){
+  const m=new Map();
+  for(const e of entries){if(isIn(e)||!e.location)continue;const k=key(e.location);if(!m.has(k))m.set(k,{name:e.location,total:0});m.get(k).total+=given(e)}
+  return m;
+}
+function lev(a,b){const d=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const t=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t}}return d[b.length]}
+// "san mateo dmv" -> ["sm dmv", "smd"]
+function abbrevs(k){const t=k.split(" ");const out=[];for(let i=2;i<=t.length;i++)out.push(t.slice(0,i).map(w=>w[0]).join("")+(i<t.length?" "+t.slice(i).join(" "):""));return out}
+function suggestions(input){
+  const q=key(input);if(q.length<2)return[];
+  const res=[];
+  for(const [k,v] of locations()){
+    if(k===q)return[];
+    let score=0;
+    if(abbrevs(k).some(a=>a===q||(q.length>=3&&a.startsWith(q))))score=3;
+    else if(q.length>=3&&(k.startsWith(q)||k.includes(" "+q)))score=2.5;
+    else if(q.length>=3&&k.includes(q))score=2;
+    else{const r=1-lev(q,k)/Math.max(q.length,k.length);if(r>=.7)score=1+r}
+    if(score)res.push([score,v.name]);
+  }
+  return res.sort((a,b)=>b[0]-a[0]).slice(0,3).map(r=>r[1]);
+}
+function renderSuggest(){
+  const s=suggestions($("location").value),box=$("locSuggest");
+  box.hidden=!s.length;
+  box.innerHTML=s.length?`Did you mean ${s.map(n=>`<button type="button" data-loc="${esc(n)}">${esc(n)}</button>`).join("")}`:"";
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const year=String(new Date().getFullYear());
+  $("stockTitle").textContent=year+" Annual Overview";
+  // monthly
+  const now=new Date(),md=new Date(now.getFullYear(),now.getMonth()-monthOffset,1);
+  const mKey=`${md.getFullYear()}-${String(md.getMonth()+1).padStart(2,"0")}`;
+  const mName=md.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+  const mShort=md.toLocaleDateString("en-US",{month:"short"});
+  const lastDay=new Date(md.getFullYear(),md.getMonth()+1,0).getDate();
+  $("monthTitle").textContent=mName+" Monthly Overview";
+  $("monthRange").textContent=monthOffset===0?`${mShort} 1 to today`:`${mShort} 1 to ${lastDay}`;
+  const earliest=entries.reduce((m,e)=>e.date<m?e.date:m,mKey);
+  $("monthPrev").disabled=mKey<=earliest.slice(0,7);
+  $("monthNext").disabled=monthOffset===0;
+  const mt={in:{},out:{}},mStats={};
+  for(const [c] of LANGS){mt.in[c]=0;mt.out[c]=0}
+  for(const e of entries){
+    if(!e.date.startsWith(mKey))continue;
+    for(const [c,k] of LANGS){if(e[k]>0)mt.in[c]+=e[k];else mt.out[c]-=e[k]}
+    for(const [k] of STATS)mStats[k]=(mStats[k]||0)+(+e[k]||0);
+  }
+  for(const [c] of LANGS){$("m-in-"+c).textContent=mt.in[c];$("m-out-"+c).textContent=mt.out[c]}
+  window.__month={name:mName,mt};
+  $("monthStats").innerHTML=STATS.map(([k,l])=>`<div><dt>${l}</dt><dd>${mStats[k]||0}</dd></div>`).join("");
+  const tot={in:{},out:{},hand:{}},yearTot={},byP=new Map();
+  for(const [c] of LANGS){tot.in[c]=0;tot.out[c]=0;tot.hand[c]=0}
+  for(const e of entries){
+    for(const [c,k] of LANGS)tot.hand[c]+=e[k];
+    if(!e.date.startsWith(year))continue;
+    for(const [c,k] of LANGS){if(e[k]>0)tot.in[c]+=e[k];else tot.out[c]-=e[k]}
+    for(const [k] of STATS)yearTot[k]=(yearTot[k]||0)+(+e[k]||0);
+    if(!isIn(e)){const g=given(e);if(g)byP.set(e.purpose,(byP.get(e.purpose)||0)+g)}
+  }
+  for(const [c] of LANGS){
+    $("in-"+c).textContent=tot.in[c];$("out-"+c).textContent=tot.out[c];
+    const h=tot.hand[c];$("hand-"+c).textContent=h;
+    $("flag-"+c).innerHTML=h<0?'<span class="pill bad">Add a count</span>':h<LOW_STOCK?'<span class="pill">Low</span>':"";
+  }
+  $("yearStats").innerHTML=STATS.map(([k,l])=>`<div><dt>${l}</dt><dd>${yearTot[k]||0}</dd></div>`).join("");
+  buildShare(year,tot);
+
+  // pie: total Bibles distributed this year, by purpose
+  const rows=[...byP.entries()].sort((a,b)=>b[1]-a[1]);
+  const total=rows.reduce((s,r)=>s+r[1],0);
+  if(!total){$("pie").innerHTML='<p class="sub">No Bibles distributed yet this year.</p>'}
+  else{
+    const R=70,C=2*Math.PI*R;let off=0;
+    const arcs=rows.map(([p,v],i)=>{const len=v/total*C;const a=`<circle r="${R}" cx="90" cy="90" fill="none" stroke="var(${CAT[i%8]})" stroke-width="28" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 90 90)"><title>${esc(p)}: ${v}</title></circle>`;off+=len;return a}).join("");
+    $("pie").innerHTML=`<svg viewBox="0 0 180 180" role="img" aria-label="${total} Bibles distributed, by purpose">${arcs}
+      <text x="90" y="92" text-anchor="middle" class="pie-total" font-size="30">${total}</text>
+      <text x="90" y="112" text-anchor="middle" class="pie-cap">Bibles distributed</text></svg>
+      <ul class="plegend">${rows.map(([p,v],i)=>`<li><i style="background:var(${CAT[i%8]})"></i><span>${esc(p)}</span><span>${v} · ${Math.round(v/total*100)}%</span></li>`).join("")}</ul>`;
+  }
+
+  // locations
+  const locs=[...locations().values()].filter(l=>l.total>0).sort((a,b)=>b.total-a.total);
+  const maxL=Math.max(1,...locs.map(l=>l.total));
+  $("locs").innerHTML=locs.length?locs.map(l=>`<li><span class="name" title="${esc(l.name)}">${esc(l.name)}</span><span class="track"><i style="width:${l.total/maxL*100}%"></i></span><b>${l.total}</b></li>`).join(""):'<li class="sub">No locations logged yet.</li>';
+  $("locList").innerHTML=locs.map(l=>`<option value="${esc(l.name)}"></option>`).join("");
+
+  // log
+  const inMode=type==="in";
+  const sorted=entries.map((e,i)=>({e,i})).filter(x=>isIn(x.e)===inMode).sort((a,b)=>b.e.date.localeCompare(a.e.date)||b.i-a.i).map(x=>x.e);
+  const shown=showAll?sorted:sorted.slice(0,10);
+  const n=v=>v>0?`<span class="plus">+${v}</span>`:v<0?String(-v):"–";
+  $("logBody").innerHTML=shown.map(e=>`<tr><td class="d">${fmtDate(e.date)}</td><td class="p"><span class="tag">${esc(e.purpose)}</span></td>
+      <td class="dist-only loc">${esc(e.location)||'<span class="sub">–</span>'}</td>
+      <td class="who">${esc(e.name)}${inMode&&e.location?`<span class="note">From ${esc(e.location)}</span>`:""}${statLine(e)}${e.notes?`<span class="note${inMode?"":" testi"}">${esc(e.notes)}</span>`:""}</td>
+      <td class="n" data-l="English">${n(e.english)}</td><td class="n" data-l="Spanish">${n(e.spanish)}</td><td class="n" data-l="Chinese">${n(e.chinese)}</td></tr>`).join("")
+    ||`<tr><td colspan="7" class="sub">No ${inMode?"inventory":"distribution"} entries yet. Use the form to add the first one.</td></tr>`;
+  $("logCount").textContent=sorted.length+" entries";
+  $("logTitle").textContent=inMode?"Inventory log":"Distribution log";
+  $("nameHead").textContent=inMode?"Ordered by":"Name";
+  $("moreBtn").hidden=sorted.length<=10;
+  $("moreBtn").textContent=showAll?"Show recent only":`Show all ${sorted.length} entries`;
+  renderChips();
+}
+
+let shareText="";
+function buildShare(year,tot){
+  const m=window.__month,L=[["en","English"],["es","Spanish"],["cn","Chinese"]];
+  const today=new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+  const lines=["*Church in Burlingame | Bible Inventory*",today,"",
+    "*Current inventory (on hand now)*",...L.map(([c,n])=>`${n}: ${tot.hand[c]}`),"",
+    `*${m.name}*`,...L.map(([c,n])=>`${n}: ${m.mt.in[c]} ordered, ${m.mt.out[c]} distributed`),"",
+    `*${year} so far*`,...L.map(([c,n])=>`${n}: ${tot.in[c]} ordered, ${tot.out[c]} distributed`)];
+  shareText=lines.join("\n");
+}
+
+function statLine(e){
+  const parts=STATS.filter(([k])=>+e[k]>0).map(([k,l])=>`${+e[k]} ${l.toLowerCase()}`);
+  return parts.length?`<span class="note">${esc(parts.join(" · "))}</span>`:"";
+}
+
+function renderChips(){
+  $("chips").innerHTML=DEFAULT_PURPOSES.map(p=>`<button type="button" class="chip" data-p="${esc(p)}" aria-pressed="${p===purpose}">${esc(p)}</button>`).join("");
+}
+
+/* ---------- data ---------- */
+async function load(){
+  if(!API_URL){
+    entries=SEED.map(norm);$("previewBanner").hidden=false;
+    $("statusText").textContent="Preview mode";render();return;
+  }
+  try{
+    const r=await fetch(API_URL,{cache:"no-store"});const j=await r.json();
+    if(!j.ok)throw new Error(j.error||"Could not read the sheet");
+    if(!Array.isArray(j.entries))throw new Error("old-script");
+    entries=j.entries.map(norm);$("dot").classList.add("on");
+    $("statusText").textContent="Live · updated "+new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+  }catch(err){
+    $("statusText").textContent=err.message==="old-script"
+      ?"The Google Sheet script needs updating: paste the full Code.gs and deploy a new version."
+      :"Couldn't load the log. Refresh to try again.";
+  }
+  render();
+}
+
+async function save(entry){
+  if(!API_URL){entries.push(norm(entry));return}
+  const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(entry)}); // text/plain avoids a CORS preflight
+  const j=await r.json();
+  if(!j.ok)throw new Error(j.error||"The sheet rejected the entry");
+  entries.push(norm(j.entry));
+}
+
+/* ---------- interactions ---------- */
+function setType(t){
+  type=t;document.body.dataset.mode=t;showAll=false;
+  $("typeOut").setAttribute("aria-pressed",t==="out");$("typeIn").setAttribute("aria-pressed",t==="in");
+  $("formTitle").textContent=t==="out"?"Log a distribution":"Add to inventory";
+  $("submitBtn").textContent=t==="out"?"Submit distribution":"Add to inventory";
+  $("nameLabel").textContent=t==="out"?"Your name":"Ordered by";
+  $("name").placeholder=t==="out"?"Name, or names of everyone who went":"Who ordered or brought them in";
+  $("notesLabel").innerHTML=t==="out"?"Testimonials <small>optional · share during prayer meeting or the Lord's Day</small>":"Notes <small>optional</small>";
+  $("notes").placeholder=t==="out"?"Who did you meet? How did the Lord move?":"Where they came from, order number, etc.";
+  $("formMsg").textContent="";
+  render();
+}
+$("typeOut").onclick=()=>setType("out");
+$("typeIn").onclick=()=>setType("in");
+$("chips").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;purpose=b.dataset.p;renderChips()});
+$("moreBtn").onclick=()=>{showAll=!showAll;render()};
+$("monthPrev").onclick=()=>{monthOffset++;render()};
+$("monthNext").onclick=()=>{if(monthOffset>0){monthOffset--;render()}};
+$("location").addEventListener("input",renderSuggest);
+$("locSuggest").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;$("location").value=b.dataset.loc;renderSuggest();$("location").focus()});
+
+$("entryForm").addEventListener("submit",async ev=>{
+  ev.preventDefault();
+  const msg=$("formMsg");msg.className="msg";
+  const q={english:+$("qtyEn").value||0,spanish:+$("qtyEs").value||0,chinese:+$("qtyCn").value||0};
+  for(const k in q)q[k]=Math.max(0,Math.round(q[k]));
+  const bibles=q.english+q.spanish+q.chinese;
+  const name=$("name").value.trim(),date=$("date").value;
+  const p=type==="in"?"Restock":purpose;
+  const problems=[],stats={};
+  for(const [k] of STATS){const v=type==="in"?0:Math.max(0,Math.round(+$("st-"+k).value||0));if(v)stats[k]=v;if(v>5000)problems.push("keep each count under 5,000")}
+  if(!bibles&&(type==="in"||!Object.keys(stats).length))problems.push(type==="in"?"enter how many New Testaments were added":"enter at least one count");
+  if(!name)problems.push("add your name");
+  if(!date)problems.push("pick a date");
+  if(!p)problems.push("write in a purpose");
+  if(Object.values(q).some(v=>v>5000))problems.push("keep each count under 5,000");
+  if(problems.length){msg.classList.add("err");msg.textContent="Please "+[...new Set(problems)].join(", ")+".";return}
+  const sign=type==="in"?1:-1;
+  const entry={date,purpose:p,location:type==="in"?"":$("location").value.trim(),name,
+    english:sign*q.english,spanish:sign*q.spanish,chinese:sign*q.chinese,...stats,notes:$("notes").value.trim()};
+  $("submitBtn").disabled=true;msg.textContent="Saving…";
+  try{
+    await save(entry);
+    try{localStorage.setItem("bil-name",name)}catch(e){}
+    for(const id of ["qtyEn","qtyEs","qtyCn","notes",...STATS.map(([k])=>"st-"+k)])$(id).value="";
+    $("locSuggest").hidden=true;
+    msg.classList.add("ok");
+    msg.textContent=`Saved: ${bibles} Bibles ${type==="in"?"added to inventory":"distributed"}${API_URL?"":" (preview only, not stored)"}. Thank you!`;
+    render();
+  }catch(err){msg.classList.add("err");msg.textContent="Couldn't save: "+err.message+". Check your connection and submit again."}
+  finally{$("submitBtn").disabled=false}
+});
+
+$("shareCopy").onclick=()=>{
+  const msg=$("shareMsg");
+  const done=()=>{msg.textContent="Copied. Paste it into WhatsApp.";setTimeout(()=>msg.textContent="",4000)};
+  const fallback=()=>{const t=$("shareFallback");t.hidden=false;t.value=shareText;t.focus();t.select();msg.textContent="Press and hold the text, then Copy."};
+  try{navigator.clipboard.writeText(shareText).then(done,fallback)}catch(e){fallback()}
+};
+
+/* ---------- start ---------- */
+$("statFields").innerHTML=STATS.map(([k,l])=>`<label for="st-${k}">${l}<input id="st-${k}" type="number" inputmode="numeric" min="0" max="5000" placeholder="0"></label>`).join("");
+$("date").value=todayISO();
+try{const n=localStorage.getItem("bil-name");if(n)$("name").value=n}catch(e){}
+setType("out");
+load();
+</script>
+
+</html>
